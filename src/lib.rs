@@ -98,9 +98,9 @@ where
         let rj = inner_product(g_l, a_r) + u.mul(scalar_inner_product::<P>(a_r, b_l)).into_affine();
 
         let challenge = <ChallengeGenerator<P>>::round_challenge(&lj, &rj);
-        let a = compress::<P>(a_l, a_r, challenge);
-        let b = compress::<P>(b_r, b_l, challenge);
-        let basis = compress_basis(g_r, g_l, challenge);
+        let a = compress::<P>(a_r, a_l, challenge);
+        let b = compress::<P>(b_l, b_r, challenge);
+        let basis = compress_basis(g_l, g_r, challenge);
         RoundOutput {
             lj,
             rj,
@@ -179,12 +179,12 @@ where
             let inverse = challenge.inverse().unwrap();
             println!("lj: {}", lj);
             println!("rj: {}", rj);
-            let new_commit = p + (rj.mul(challenge.square()) + lj.mul(inverse.square()));
+            let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
 
             let (b_l, b_r) = split(&*b);
             let (g_l, g_r) = split(&*basis);
-            let b = compress::<P>(b_r, b_l, challenge);
-            let basis = compress_basis(g_r, g_l, challenge);
+            let b = compress::<P>(b_l, b_r, challenge);
+            let basis = compress_basis(g_l, g_r, challenge);
 
             (new_commit, basis, b)
         });
