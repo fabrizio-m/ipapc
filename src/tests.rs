@@ -1,4 +1,5 @@
 use crate::{Init, IpaScheme};
+use ark_ff::One;
 use ark_pallas::{Fr, PallasParameters};
 use ark_poly::{Polynomial, UVPolynomial};
 
@@ -16,8 +17,10 @@ fn test1() {
     println!("eval: {}", eval);
     println!();
     let proof = scheme.open(commit, &poly, point, eval);
+    let bad_proof = scheme.open(commit, &poly, point, eval + Fr::one());
     println!("opening: {:?}", proof.a);
     //println!("opening: {:#?}", proof.rounds);
     println!();
     assert_eq!(scheme.verify(commit, proof).unwrap(), eval);
+    assert!(scheme.verify(commit, bad_proof).is_none());
 }

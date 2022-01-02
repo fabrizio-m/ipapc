@@ -1,15 +1,15 @@
 use ark_ec::{
-    short_weierstrass_jacobian::{GroupAffine, GroupProjective},
-    AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
+    short_weierstrass_jacobian::GroupAffine, AffineCurve, ModelParameters, ProjectiveCurve,
+    SWModelParameters,
 };
-use ark_ff::{Field, One, PrimeField};
+use ark_ff::{Field, One};
 use ark_poly::univariate::DensePolynomial;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{
     convert::identity,
     fmt::Debug,
     iter::{repeat, successors},
-    ops::{Add, Mul},
+    ops::Add,
 };
 
 use crate::challenges::ChallengeGenerator;
@@ -19,7 +19,7 @@ mod challenges;
 mod tests;
 
 type Poly<Fr> = DensePolynomial<Fr>;
-type Fr<P: SWModelParameters> = <GroupAffine<P> as AffineCurve>::ScalarField;
+type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
 pub struct IpaScheme<P>
 where
     P: ModelParameters + SWModelParameters,
@@ -103,6 +103,9 @@ where
         if a.len().is_one() {
             println!("final b: {}", b[0]);
             println!("final basis: {}", basis[0]);
+            let comm = basis[0].mul(a[0]) + u.mul(a[0] * b[0]);
+            println!("p comm: {}", comm);
+
             Opening::<P> {
                 a: a[0],
                 rounds,
@@ -124,7 +127,7 @@ where
     ) -> Opening<P> {
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
         println!("U: {}", u);
-        let p = commitment.0 + u.mul(eval).into_affine();
+        //let p = commitment.0 + u.mul(eval).into_affine();
         let basis = &*self.basis;
         let b = self.b(point);
         let first = Self::round(basis, a, &*b, u);
@@ -151,7 +154,7 @@ where
             let inverse = challenge.inverse().unwrap();
             println!("lj: {}", lj);
             println!("rj: {}", rj);
-            let new_commit = p + (lj.mul(challenge) + rj.mul(inverse));
+            let new_commit = p + (rj.mul(challenge.square()) + lj.mul(inverse.square()));
 
             let (b_l, b_r) = split(&*b);
             let (g_l, g_r) = split(&*basis);
@@ -163,6 +166,8 @@ where
         println!("final b: {}", b[0]);
         println!("final basis: {}", basis[0]);
 
+        println!("p2 comm: {}", basis[0].mul(a) + u.mul(a * b[0]));
+        println!("p3 comm: {}", final_commit);
         let final_check = final_commit == basis[0].mul(a) + u.mul(a * b[0]);
         if final_check {
             Some(eval)
