@@ -1,3 +1,4 @@
+use crate::challenges::ChallengeGenerator;
 use ark_ec::{
     short_weierstrass_jacobian::GroupAffine, AffineCurve, ModelParameters, ProjectiveCurve,
     SWModelParameters,
@@ -11,12 +12,12 @@ use std::{
     iter::{repeat, successors},
     ops::Add,
 };
-
-use crate::challenges::ChallengeGenerator;
+use utils::{compress, compress_basis, inner_product, scalar_inner_product, split};
 
 mod challenges;
 #[cfg(test)]
 mod tests;
+mod utils;
 
 type Poly<Fr> = DensePolynomial<Fr>;
 type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
@@ -26,6 +27,30 @@ where
 {
     basis: Vec<GroupAffine<P>>,
     max_degree: usize,
+}
+#[derive(Debug)]
+pub struct Opening<P: SWModelParameters> {
+    point: Fr<P>,
+    eval: Fr<P>,
+    rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
+    a: Fr<P>,
+}
+struct RoundOutput<P: SWModelParameters> {
+    lj: GroupAffine<P>,
+    rj: GroupAffine<P>,
+    a: Vec<Fr<P>>,
+    b: Vec<Fr<P>>,
+    basis: Vec<GroupAffine<P>>,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Commitment<T: SWModelParameters>(GroupAffine<T>)
+where
+    GroupAffine<T>: Debug;
+
+pub enum Init<T: SWModelParameters> {
+    Seed(u64),
+    Elements(Vec<GroupAffine<T>>),
 }
 
 impl<P> IpaScheme<P>
@@ -175,72 +200,6 @@ where
             None
         }
     }
-}
-#[derive(Debug)]
-pub struct Opening<P: SWModelParameters> {
-    point: Fr<P>,
-    eval: Fr<P>,
-    rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
-    a: Fr<P>,
-}
-struct RoundOutput<P: SWModelParameters> {
-    lj: GroupAffine<P>,
-    rj: GroupAffine<P>,
-    a: Vec<Fr<P>>,
-    b: Vec<Fr<P>>,
-    basis: Vec<GroupAffine<P>>,
-}
-fn compress_basis<P: SWModelParameters>(
-    left: &[GroupAffine<P>],
-    right: &[GroupAffine<P>],
-    challenge: Fr<P>,
-) -> Vec<GroupAffine<P>> {
-    assert_eq!(left.len(), right.len());
-    let inverse = challenge.inverse().unwrap();
-    let left = left.iter().map(|elem| elem.mul(inverse));
-    let right = right.iter().map(|elem| elem.mul(challenge));
-    left.zip(right)
-        .map(|(a, b)| (a + b).into_affine())
-        .collect()
-}
-fn compress<P: SWModelParameters>(left: &[Fr<P>], right: &[Fr<P>], challenge: Fr<P>) -> Vec<Fr<P>> {
-    assert_eq!(left.len(), right.len());
-    let inverse = challenge.inverse().unwrap();
-    let left = left.iter().map(|elem| *elem * inverse);
-    let right = right.iter().map(|elem| *elem * challenge);
-    left.zip(right).map(|(a, b)| a + b).collect()
-}
-fn inner_product<P: SWModelParameters>(a: &[GroupAffine<P>], b: &[Fr<P>]) -> GroupAffine<P> {
-    assert_eq!(a.len(), b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(a, b)| a.mul(*b))
-        .reduce(Add::add)
-        .unwrap()
-        .into_affine()
-}
-fn scalar_inner_product<P: SWModelParameters>(a: &[Fr<P>], b: &[Fr<P>]) -> Fr<P> {
-    assert_eq!(a.len(), b.len());
-    a.iter()
-        .zip(b.iter())
-        .map(|(a, b)| *a * *b)
-        .reduce(Add::add)
-        .unwrap()
-}
-fn split<T>(slice: &[T]) -> (&[T], &[T]) {
-    let len = slice.len();
-    assert_eq!(len % 2, 0);
-    (&slice[0..len / 2], &slice[len / 2..])
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Commitment<T: SWModelParameters>(GroupAffine<T>)
-where
-    GroupAffine<T>: Debug;
-
-pub enum Init<T: SWModelParameters> {
-    Seed(u64),
-    Elements(Vec<GroupAffine<T>>),
 }
 
 impl<T: SWModelParameters> Init<T> {
