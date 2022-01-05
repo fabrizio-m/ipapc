@@ -15,6 +15,7 @@ use std::{
 use utils::{compress, compress_basis, inner_product, scalar_inner_product, split};
 
 mod challenges;
+mod homomorphism;
 #[cfg(test)]
 mod tests;
 mod utils;
@@ -43,7 +44,7 @@ struct RoundOutput<P: SWModelParameters> {
     basis: Vec<GroupAffine<P>>,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Commitment<T: SWModelParameters>(GroupAffine<T>)
 where
     GroupAffine<T>: Debug;
