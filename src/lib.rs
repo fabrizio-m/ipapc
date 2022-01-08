@@ -169,32 +169,30 @@ where
             rounds,
         } = open;
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
-        println!("U: {}", u);
         let p = commitment.0.into_projective() + u.mul(eval);
         let basis = self.basis.clone();
-        let b = self.b(point);
+        let mut exp = 2_u64.pow(rounds.len() as u32);
 
-        let (final_commit, basis, b) = rounds.iter().fold((p, basis, b), |state, (lj, rj)| {
-            let (p, basis, b) = state;
-            let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
-            let inverse = challenge.inverse().unwrap();
-            println!("lj: {}", lj);
-            println!("rj: {}", rj);
-            let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
+        let (final_commit, basis, b) =
+            rounds
+                .iter()
+                .enumerate()
+                .fold((p, basis, Fr::<P>::one()), |state, (i, (lj, rj))| {
+                    let (p, basis, b) = state;
+                    let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
+                    let inverse = challenge.inverse().unwrap();
+                    let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
 
-            let (b_l, b_r) = split(&*b);
-            let (g_l, g_r) = split(&*basis);
-            let b = compress::<P>(b_l, b_r, challenge);
-            let basis = compress_basis(g_l, g_r, challenge);
+                    let (g_l, g_r) = split(&*basis);
+                    let basis = compress_basis(g_l, g_r, challenge);
 
-            (new_commit, basis, b)
-        });
-        println!("final b: {}", b[0]);
-        println!("final basis: {}", basis[0]);
+                    exp = exp / 2;
+                    let new_b = inverse + challenge * point.pow([exp]);
+                    let b = new_b * b;
 
-        println!("p2 comm: {}", basis[0].mul(a) + u.mul(a * b[0]));
-        println!("p3 comm: {}", final_commit);
-        let final_check = final_commit == basis[0].mul(a) + u.mul(a * b[0]);
+                    (new_commit, basis, b)
+                });
+        let final_check = final_commit == basis[0].mul(a) + u.mul(a * b);
         if final_check {
             Some(eval)
         } else {
