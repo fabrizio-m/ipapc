@@ -4,7 +4,6 @@ use ark_ec::{
     SWModelParameters,
 };
 use ark_ff::{Field, One};
-use ark_poly::univariate::DensePolynomial;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{
     convert::identity,
@@ -20,7 +19,7 @@ mod homomorphism;
 mod tests;
 mod utils;
 
-type Poly<Fr> = DensePolynomial<Fr>;
+//type Poly<Fr> = DensePolynomial<Fr>;
 type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
 pub struct IpaScheme<P>
 where
@@ -62,7 +61,6 @@ where
 {
     pub fn init(init: Init<P>, max_size: u8) -> Self {
         let max_degree = 2_usize.pow(max_size as u32);
-        println!("m: {}", max_degree);
         let basis = init.to_elements(max_degree);
         Self { basis, max_degree }
     }
@@ -117,21 +115,8 @@ where
         eval: Fr<P>,
         u: GroupAffine<P>,
     ) -> Opening<P> {
-        let RoundOutput {
-            lj,
-            rj,
-            a,
-            b,
-            basis,
-        } = prev;
-        println!("lj: {}", lj);
-        println!("rj: {}", rj);
+        let RoundOutput { a, b, basis, .. } = prev;
         if a.len().is_one() {
-            println!("final b: {}", b[0]);
-            println!("final basis: {}", basis[0]);
-            let comm = basis[0].mul(a[0]) + u.mul(a[0] * b[0]);
-            println!("p comm: {}", comm);
-
             Opening::<P> {
                 a: a[0],
                 rounds,
@@ -152,8 +137,6 @@ where
         eval: Fr<P>,
     ) -> Opening<P> {
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
-        println!("U: {}", u);
-        //let p = commitment.0 + u.mul(eval).into_affine();
         let basis = &*self.basis;
         let b = self.b(point);
         let first = Self::round(basis, a, &*b, u);
@@ -176,8 +159,7 @@ where
         let (final_commit, basis, b) =
             rounds
                 .iter()
-                .enumerate()
-                .fold((p, basis, Fr::<P>::one()), |state, (i, (lj, rj))| {
+                .fold((p, basis, Fr::<P>::one()), |state, (lj, rj)| {
                     let (p, basis, b) = state;
                     let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
                     let inverse = challenge.inverse().unwrap();
