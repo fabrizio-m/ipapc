@@ -1,6 +1,7 @@
 use crate::Fr;
 use ark_ec::{
-    short_weierstrass_jacobian::GroupAffine, AffineCurve, ProjectiveCurve, SWModelParameters,
+    short_weierstrass_jacobian::{GroupAffine, GroupProjective},
+    AffineCurve, ProjectiveCurve, SWModelParameters,
 };
 use ark_ff::Field;
 use std::ops::Add;
@@ -30,14 +31,16 @@ pub fn compress<P: SWModelParameters>(
     left.zip(right).map(|(a, b)| a + b).collect()
 }
 
-pub fn inner_product<P: SWModelParameters>(a: &[GroupAffine<P>], b: &[Fr<P>]) -> GroupAffine<P> {
+pub fn inner_product<P: SWModelParameters>(
+    a: &[GroupAffine<P>],
+    b: &[Fr<P>],
+) -> GroupProjective<P> {
     assert_eq!(a.len(), b.len());
     a.iter()
         .zip(b.iter())
         .map(|(a, b)| a.mul(*b))
         .reduce(Add::add)
         .unwrap()
-        .into_affine()
 }
 pub fn scalar_inner_product<P: SWModelParameters>(a: &[Fr<P>], b: &[Fr<P>]) -> Fr<P> {
     assert_eq!(a.len(), b.len());
