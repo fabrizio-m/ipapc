@@ -1,5 +1,4 @@
-use crate::Commitment;
-use crate::Fr;
+use crate::{Commitment, Fr};
 use ark_ec::{AffineCurve, ProjectiveCurve, SWModelParameters};
 use std::ops::{Add, Mul, Neg, Sub};
 

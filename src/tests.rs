@@ -15,14 +15,8 @@ fn test1() {
         let poly = ark_poly::univariate::DensePolynomial::<Fr>::from_coefficients_slice(&*poly);
         poly.evaluate(&point)
     };
-    println!("commit: {:?}", commit.0);
-    println!("eval: {}", eval);
-    println!();
     let proof = scheme.open(commit, factor, &poly, point, eval);
     let bad_proof = scheme.open(commit, factor, &poly, point, eval + Fr::one());
-    println!("opening: {:?}", proof.a);
-    //println!("opening: {:#?}", proof.rounds);
-    println!();
     assert_eq!(scheme.verify(commit, proof).unwrap(), eval);
     assert!(scheme.verify(commit, bad_proof).is_none());
 }
