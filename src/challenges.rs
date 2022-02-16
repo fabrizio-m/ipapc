@@ -28,7 +28,10 @@ impl<P: SWModelParameters> ChallengeGenerator<P> {
     fn digest_scalar(&mut self, element: &Fr<P>) {
         element.serialize_unchecked(&mut self.data).unwrap()
     }
-    pub fn inner_product_basis(commitment: &Commitment<P>, point: &Fr<P>) -> GroupAffine<P> {
+    pub fn inner_product_basis<const HIDING: bool>(
+        commitment: &Commitment<P, HIDING>,
+        point: &Fr<P>,
+    ) -> GroupAffine<P> {
         let mut challenge_generator = Self::new();
         challenge_generator.digest(&commitment.0);
         challenge_generator.digest_scalar(point);
