@@ -1,4 +1,4 @@
-use crate::{Commitment, Fr};
+use crate::{Commitment, Fr, UnsafeHidingCommitment};
 use ark_ec::{AffineCurve, ProjectiveCurve, SWModelParameters};
 use std::ops::{Add, Mul, Neg, Sub};
 
@@ -30,6 +30,39 @@ impl<P: SWModelParameters, const HIDING: bool> Sub for Commitment<P, HIDING> {
         self + (-rhs)
     }
 }
+///for unsafe hiding
+impl<P: SWModelParameters> Add for UnsafeHidingCommitment<P> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let Self(a, b) = self;
+        let Self(c, d) = rhs;
+        Self(a + c, b + d)
+    }
+}
+impl<P: SWModelParameters> Mul<Fr<P>> for UnsafeHidingCommitment<P> {
+    type Output = Self;
+
+    fn mul(self, rhs: Fr<P>) -> Self::Output {
+        let Self(a, b) = self;
+        Self(a.mul(rhs).into_affine(), b * rhs)
+    }
+}
+impl<P: SWModelParameters> Neg for UnsafeHidingCommitment<P> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let Self(a, b) = self;
+        Self(-a, -b)
+    }
+}
+impl<P: SWModelParameters> Sub for UnsafeHidingCommitment<P> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + (-rhs)
+    }
+}
 
 #[test]
 fn homomorphisms() {
@@ -40,7 +73,7 @@ fn homomorphisms() {
 
     let make_scheme = || {
         let rng = StdRng::seed_from_u64(1);
-        IpaScheme::<_, _, true>::init(Init::<P>::Seed(1), 2, rng)
+        (IpaScheme::<_, true>::init(Init::<P>::Seed(1), 2), rng)
     };
 
     let p1 = [0, 1, 2, 3].map(Fr::<P>::from).to_vec();
@@ -50,15 +83,15 @@ fn homomorphisms() {
     let p4 = p1.iter().map(|e| *e * scalar).collect::<Vec<_>>();
 
     let check = |poly: Vec<_>| {
-        let mut scheme = make_scheme();
-        let (c, b) = scheme.commit_hiding(poly.clone());
+        let (scheme, mut rng) = make_scheme();
+        let commit = scheme.commit_hiding(poly.clone(), &mut rng);
         let point = Fr::<P>::from(43);
         let eval = {
             let poly = DensePolynomial::<Fr<P>>::from_coefficients_slice(&*poly);
             poly.evaluate(&point)
         };
-        let open = scheme.open_hiding(c, b, &*poly, point, eval);
-        scheme.verify_hiding(c, open).unwrap()
+        let open = scheme.open_hiding(commit, &*poly, point, eval, &mut rng);
+        scheme.verify_hiding(commit.into(), open).unwrap()
     };
     let c1 = check(p1);
     let c2 = check(p2);

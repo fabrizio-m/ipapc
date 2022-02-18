@@ -21,14 +21,13 @@ mod utils;
 
 //type Poly<Fr> = DensePolynomial<Fr>;
 type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
-pub struct IpaScheme<P, R, const HIDING: bool>
+pub struct IpaScheme<P, const HIDING: bool>
 where
     P: ModelParameters + SWModelParameters,
-    R: Rng,
 {
     basis: Vec<GroupAffine<P>>,
     blinding_basis: GroupAffine<P>,
-    rng: R,
+    //rng: R,
     max_degree: usize,
 }
 #[derive(Debug)]
@@ -67,6 +66,17 @@ pub struct Commitment<T: SWModelParameters, const HIDING: bool>(GroupAffine<T>)
 where
     GroupAffine<T>: Debug;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UnsafeHidingCommitment<T: SWModelParameters>(GroupAffine<T>, Fr<T>)
+where
+    GroupAffine<T>: Debug;
+
+impl<P: SWModelParameters> From<UnsafeHidingCommitment<P>> for Commitment<P, true> {
+    fn from(unsafe_commitment: UnsafeHidingCommitment<P>) -> Self {
+        Commitment(unsafe_commitment.0)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Blinding<P: SWModelParameters>(Fr<P>);
 
 pub enum Init<T: SWModelParameters> {
@@ -74,24 +84,23 @@ pub enum Init<T: SWModelParameters> {
     Elements(Vec<GroupAffine<T>>, GroupAffine<T>),
 }
 
-impl<P, R, const HIDING: bool> IpaScheme<P, R, HIDING>
+impl<P, const HIDING: bool> IpaScheme<P, HIDING>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
     Commitment<P, HIDING>: Clone + Copy,
-    R: Rng,
 {
-    pub fn init(init: Init<P>, max_size: u8, rng: R) -> Self {
+    pub fn init(init: Init<P>, max_size: u8) -> Self {
         let max_degree = 2_usize.pow(max_size as u32);
         let (basis, blinding_basis) = init.to_elements(max_degree);
         Self {
             basis,
             max_degree,
             blinding_basis,
-            rng,
+            //rng,
         }
     }
-    pub fn commit_simple<'a>(&mut self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
+    pub fn commit_simple<'a>(&self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
         debug_assert_eq!(coeffs.len(), self.max_degree);
         self.basis
             .iter()
@@ -100,20 +109,22 @@ where
             .reduce(Add::add)
             .unwrap()
     }
-    pub fn commit_hiding<'a>(&mut self, coeffs: Vec<Fr<P>>) -> (Commitment<P, HIDING>, Blinding<P>)
+    pub fn commit_hiding<'a>(
+        &self,
+        coeffs: Vec<Fr<P>>,
+        rng: &mut impl Rng,
+    ) -> UnsafeHidingCommitment<P>
     where
         Assert<HIDING>: IsTrue,
     {
         assert_eq!(coeffs.len(), self.max_degree);
-        let blinding_factor = Fr::<P>::rand(&mut self.rng);
+        let blinding_factor = Fr::<P>::rand(rng);
         let commitment = self.commit_simple(coeffs);
         let commitment = commitment + self.blinding_basis.mul(blinding_factor);
-        (
-            Commitment(commitment.into_affine()),
-            Blinding(blinding_factor),
-        )
+
+        UnsafeHidingCommitment(commitment.into_affine(), blinding_factor)
     }
-    pub fn commit<'a>(&mut self, coeffs: Vec<Fr<P>>) -> Commitment<P, HIDING>
+    pub fn commit<'a>(&self, coeffs: Vec<Fr<P>>) -> Commitment<P, HIDING>
     where
         Assert<HIDING>: IsFalse,
     {
@@ -132,7 +143,7 @@ where
         b: &[Fr<P>],
         u: GroupAffine<P>,
         blinding_basis: GroupAffine<P>,
-        rng: &mut R,
+        rng: &mut impl Rng,
         blind: Fr<P>,
     ) -> HidingRoundOutput<P>
     where
@@ -188,7 +199,7 @@ where
         b: &[Fr<P>],
         u: GroupAffine<P>,
         blinding_basis: GroupAffine<P>,
-        rng: &mut R,
+        rng: &mut impl Rng,
         blind: Fr<P>,
     ) -> HidingRoundOutput<P> {
         assert_eq!(basis.len(), a.len());
@@ -279,7 +290,7 @@ where
         eval: Fr<P>,
         u: GroupAffine<P>,
         blinding_basis: GroupAffine<P>,
-        rng: &mut R,
+        rng: &mut impl Rng,
     ) -> HidingOpening<P>
     where
         Assert<HIDING>: IsTrue,
@@ -326,36 +337,31 @@ where
         }
     }
     pub fn open_hiding(
-        &mut self,
-        commitment: Commitment<P, HIDING>,
-        blinding: Blinding<P>,
+        &self,
+        commitment: UnsafeHidingCommitment<P>,
         a: &[Fr<P>],
         point: Fr<P>,
         eval: Fr<P>,
+        rng: &mut impl Rng,
     ) -> HidingOpening<P>
     where
         Assert<HIDING>: IsTrue,
     {
+        let UnsafeHidingCommitment(commitment, blinding) = commitment;
+        let commitment = Commitment::<_, true>(commitment);
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
         let basis = &*self.basis;
         let blinding_basis = self.blinding_basis;
         let b = self.b(point);
         //let mut rng = &self.rng;
-        let first = Self::hiding_round(basis, a, &*b, u, blinding_basis, &mut self.rng, blinding.0);
+        let first = Self::hiding_round(basis, a, &*b, u, blinding_basis, rng, blinding);
         let rounds = vec![(first.lj, first.rj)];
-        let opening = Self::open_recursive_hiding(
-            first,
-            rounds,
-            point,
-            eval,
-            u,
-            blinding_basis,
-            &mut self.rng,
-        );
+        let opening =
+            Self::open_recursive_hiding(first, rounds, point, eval, u, blinding_basis, rng);
         opening
     }
     pub fn open(
-        &mut self,
+        &self,
         commitment: Commitment<P, HIDING>,
         a: &[Fr<P>],
         point: Fr<P>,
