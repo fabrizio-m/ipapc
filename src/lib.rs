@@ -3,7 +3,7 @@ use ark_ec::{
     short_weierstrass_jacobian::{GroupAffine, GroupProjective},
     AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
 };
-use ark_ff::{Field, One, UniformRand};
+use ark_ff::{Field, One, PrimeField, UniformRand};
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{
     convert::identity,
@@ -109,6 +109,17 @@ where
             .reduce(Add::add)
             .unwrap()
     }
+    pub fn commit_simple_multiexp<'a>(&self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
+        debug_assert_eq!(coeffs.len(), self.max_degree);
+        let bases = &*self.basis;
+        let coeffs = coeffs
+            .into_iter()
+            .map(|e| e.into_repr())
+            .collect::<Vec<_>>();
+        let scalars = &*coeffs;
+        let result = ark_ec::msm::VariableBaseMSM::multi_scalar_mul(bases, scalars);
+        result
+    }
     pub fn commit_hiding<'a>(
         &self,
         coeffs: Vec<Fr<P>>,
@@ -185,6 +196,7 @@ where
 
         let ([lj, rj], [a, b], basis, blind) =
             Self::general_round(basis, a, b, u, None, None, None);
+        debug_assert!(blind.is_none());
         RoundOutput {
             lj,
             rj,

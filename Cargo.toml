@@ -1,6 +1,6 @@
 [package]
 name = "ipapc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,10 +9,25 @@ edition = "2021"
 ark-ff = "0.3"
 ark-poly = "0.3"
 ark-ec = "0.3"
-rand = {version = "0.8", optional = true}
+rand = {version = "0.8", optional = true, features = ["min_const_gen"]}
 blake2  = {version = "0.10.0"}
 ark-serialize = "0.3"
 ark-pallas = "0.3"
 
 [features]
 default = ["rand"]
+
+[dev-dependencies]
+criterion = "0.3"
+iai = "0.1"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[[bench]]
+name = "iai_bench"
+harness = false
+
+[lib]
+bench = false
