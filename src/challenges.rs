@@ -1,3 +1,4 @@
+use crate::{prove::Commitment, Fr};
 use ark_ec::{
     short_weierstrass_jacobian::GroupAffine, AffineCurve, ProjectiveCurve, SWModelParameters,
 };
@@ -6,8 +7,6 @@ use ark_serialize::CanonicalSerialize;
 use blake2::{Blake2s256, Digest};
 use rand::{prelude::StdRng, SeedableRng};
 use std::marker::PhantomData;
-
-use crate::{Commitment, Fr};
 
 #[derive(Clone)]
 pub struct ChallengeGenerator<P: SWModelParameters> {

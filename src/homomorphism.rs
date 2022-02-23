@@ -1,4 +1,7 @@
-use crate::{Commitment, Fr, UnsafeHidingCommitment};
+use crate::{
+    prove::{Commitment, UnsafeHidingCommitment},
+    Fr,
+};
 use ark_ec::{AffineCurve, ProjectiveCurve, SWModelParameters};
 use std::ops::{Add, Mul, Neg, Sub};
 
