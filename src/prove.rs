@@ -131,49 +131,6 @@ where
         }
     }
 
-    fn round_old(
-        basis: &[GroupAffine<P>],
-        a: &[Fr<P>],
-        b: &[Fr<P>],
-        u: GroupAffine<P>,
-        blinding_basis: GroupAffine<P>,
-        rng: &mut impl Rng,
-        blind: Fr<P>,
-    ) -> HidingRoundOutput<P> {
-        assert_eq!(basis.len(), a.len());
-        assert_eq!(basis.len(), b.len());
-        assert!(basis.len() > 1);
-        let (a_l, a_r) = split(a);
-        let (b_l, b_r) = split(b);
-        let (g_l, g_r) = split(basis);
-
-        let [blind_r, blind_l] = [(); 2].map(|_| Fr::<P>::rand(rng));
-        //.map(|field| blinding_basis.mul(field));
-        let lj = inner_product(g_r, a_l)
-            + blinding_basis.mul(blind_l)
-            + u.mul(scalar_inner_product::<P>(a_l, b_r));
-        let rj = inner_product(g_l, a_r)
-            + blinding_basis.mul(blind_r)
-            + u.mul(scalar_inner_product::<P>(a_r, b_l));
-
-        let [lj, rj] = [lj, rj].map(|point| point.into_affine());
-
-        let challenge = <ChallengeGenerator<P>>::round_challenge(&lj, &rj);
-        let blind =
-            challenge.square() * blind_l + blind + challenge.inverse().unwrap().square() * blind_r;
-        let a = compress::<P>(a_r, a_l, challenge);
-        let b = compress::<P>(b_l, b_r, challenge);
-        let basis = compress_basis(g_l, g_r, challenge);
-        HidingRoundOutput {
-            lj,
-            rj,
-            a,
-            b,
-            basis,
-            blind,
-        }
-    }
-
     fn general_round(
         basis: &[GroupAffine<P>],
         a: &[Fr<P>],

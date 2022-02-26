@@ -9,7 +9,6 @@ use std::{
     convert::identity,
     fmt::Debug,
     iter::{repeat, successors},
-    ops::Add,
 };
 
 mod challenges;
@@ -56,15 +55,6 @@ where
         }
     }
     fn commit_simple<'a>(&self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
-        debug_assert_eq!(coeffs.len(), self.max_degree);
-        self.basis
-            .iter()
-            .zip(coeffs.into_iter())
-            .map(|(g, f)| g.mul(f))
-            .reduce(Add::add)
-            .unwrap()
-    }
-    fn commit_simple_multiexp<'a>(&self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
         debug_assert_eq!(coeffs.len(), self.max_degree);
         let bases = &*self.basis;
         let coeffs = coeffs

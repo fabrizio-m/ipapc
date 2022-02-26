@@ -1,9 +1,10 @@
 use crate::challenges::ChallengeGenerator;
 use crate::prove::{Commitment, HidingOpening, Opening};
-use crate::utils::{compress_basis, split};
 use crate::{Assert, Fr, IpaScheme, IsFalse};
-use ark_ec::{AffineCurve, ModelParameters, SWModelParameters};
-use ark_ff::{Field, One};
+use ark_ec::short_weierstrass_jacobian::{GroupAffine, GroupProjective};
+use ark_ec::{AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters};
+use ark_ff::{Field, One, PrimeField};
+use std::iter::repeat;
 use std::ops::Mul;
 
 impl<P, const HIDING: bool> IpaScheme<P, HIDING>
@@ -24,32 +25,8 @@ where
             rounds,
             blinding_factor,
         } = open;
-        let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
-        let p = commitment.0.into_projective() + u.mul(eval);
-        let basis = self.basis.clone();
-        let mut exp = 2_u64.pow(rounds.len() as u32);
-
-        let (final_commit, basis, b) =
-            rounds
-                .iter()
-                .fold((p, basis, Fr::<P>::one()), |state, (lj, rj)| {
-                    let (p, basis, b) = state;
-                    let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
-                    let inverse = challenge.inverse().unwrap();
-                    let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
-
-                    let (g_l, g_r) = split(&*basis);
-                    let basis = compress_basis(g_l, g_r, challenge);
-
-                    exp = exp / 2;
-                    let new_b = inverse + challenge * point.pow([exp]);
-                    let b = new_b * b;
-
-                    (new_commit, basis, b)
-                });
-        let final_check = final_commit
-            == basis[0].mul(a) + u.mul(a * b) + self.blinding_basis.mul(blinding_factor);
-        if final_check {
+        let (final_commit, check) = self.general_verify(commitment, point, eval, a, rounds);
+        if final_commit == check + self.blinding_basis.mul(blinding_factor) {
             Some(eval)
         } else {
             None
@@ -66,9 +43,23 @@ where
             a,
             rounds,
         } = open;
+        let (final_commit, check) = self.general_verify(commitment, point, eval, a, rounds);
+        if final_commit == check {
+            Some(eval)
+        } else {
+            None
+        }
+    }
+    fn general_verify(
+        &self,
+        commitment: Commitment<P, HIDING>,
+        point: Fr<P>,
+        eval: Fr<P>,
+        a: Fr<P>,
+        rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
+    ) -> (GroupProjective<P>, GroupProjective<P>) {
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
         let p = commitment.0.into_projective() + u.mul(eval);
-        let basis = self.basis.clone();
         let mut exp = 2_u64.pow(rounds.len() as u32);
         struct PolySegment<P: SWModelParameters> {
             inverse: Fr<P>,
@@ -76,16 +67,18 @@ where
             exp: u64,
         }
 
-        let (final_commit, basis, b) = rounds.iter().fold(
-            (p, basis, Vec::<PolySegment<P>>::with_capacity(rounds.len())),
+        let (final_commit, challenges, b) = rounds.iter().fold(
+            (
+                p,
+                Vec::with_capacity(rounds.len()),
+                Vec::<PolySegment<P>>::with_capacity(rounds.len()),
+            ),
             |state, (lj, rj)| {
-                let (p, basis, mut b) = state;
+                let (p, mut challenges, mut b) = state;
                 let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
                 let inverse = challenge.inverse().unwrap();
                 let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
-
-                let (g_l, g_r) = split(&*basis);
-                let basis = compress_basis(g_l, g_r, challenge);
+                challenges.push((challenge, inverse));
 
                 exp = exp / 2;
                 b.push(PolySegment {
@@ -94,9 +87,11 @@ where
                     exp,
                 });
 
-                (new_commit, basis, b)
+                (new_commit, challenges, b)
             },
         );
+        let s = s_vec::<P>(challenges);
+        let basis = self.basis_from_s(s);
         let b = b
             .into_iter()
             .map(|segment| {
@@ -109,11 +104,40 @@ where
             })
             .reduce(Mul::mul)
             .unwrap();
-        let final_check = final_commit == basis[0].mul(a) + u.mul(a * b);
-        if final_check {
-            Some(eval)
-        } else {
-            None
-        }
+        (final_commit, basis.mul(a) + u.mul(a * b))
     }
+    fn basis_from_s(&self, s: Vec<Fr<P>>) -> GroupAffine<P> {
+        debug_assert_eq!(s.len(), self.max_degree);
+        let bases = &*self.basis;
+        let coeffs = s.into_iter().map(|e| e.into_repr()).collect::<Vec<_>>();
+        let scalars = &*coeffs;
+        let result = ark_ec::msm::VariableBaseMSM::multi_scalar_mul(bases, scalars);
+        result.into_affine()
+    }
+}
+
+fn s_vec<P: SWModelParameters>(challenges: Vec<(Fr<P>, Fr<P>)>) -> Vec<Fr<P>> {
+    let size = challenges.len();
+    let size = 2_usize.pow(size as u32) as usize;
+    let mut challenges = challenges
+        .into_iter()
+        .enumerate()
+        .map(|(i, (challenge, inverse))| {
+            let segment_size = size / (2_usize.pow(i as u32 + 1));
+            let challenge_segment = repeat(challenge).take(segment_size);
+            let inverse_segment = repeat(inverse).take(segment_size);
+            let combined = inverse_segment.chain(challenge_segment);
+            combined.cycle()
+        })
+        .collect::<Vec<_>>();
+    let f = || {
+        let elem = challenges
+            .iter_mut()
+            .filter_map(|iter| iter.next())
+            .reduce(Mul::mul);
+        elem
+    };
+    let s = std::iter::from_fn(f).take(size).collect::<Vec<_>>();
+    debug_assert_eq!(size, s.len());
+    s
 }
