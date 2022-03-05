@@ -22,7 +22,7 @@ fn sample(size: u8) -> (Scheme, Vec<Fr>, ThreadRng) {
 }
 
 pub fn commit(c: &mut Criterion) {
-    c.bench_function("commit", |b| {
+    c.bench_function("commit_simple", |b| {
         let (scheme, poly, _rng) = sample(SIZE);
 
         let coeffs = black_box(poly.to_vec());
@@ -32,7 +32,7 @@ pub fn commit(c: &mut Criterion) {
     });
 }
 pub fn open(c: &mut Criterion) {
-    c.bench_function("open", |b| {
+    c.bench_function("open_simple", |b| {
         let (scheme, poly, mut rng) = sample(SIZE);
         b.iter_batched(
             || {
@@ -57,7 +57,7 @@ pub fn open(c: &mut Criterion) {
     });
 }
 pub fn verify(c: &mut Criterion) {
-    c.bench_function("verify", |b| {
+    c.bench_function("verify_simple", |b| {
         let (scheme, poly, mut rng) = sample(SIZE);
         b.iter_batched(
             || {

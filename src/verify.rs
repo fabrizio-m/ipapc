@@ -85,8 +85,6 @@ where
         let s = s_vec::<P>(challenges);
         let basis = self.basis_from_s(s);
         let b = s_poly.eval(point);
-        println!("verifier basis:");
-        println!("{}", basis);
         (final_commit, basis.mul(a) + u.mul(a * b))
     }
     fn basis_from_s(&self, s: Vec<Fr<P>>) -> GroupAffine<P> {
