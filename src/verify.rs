@@ -1,5 +1,6 @@
 use crate::challenges::ChallengeGenerator;
 use crate::prove::{Commitment, HidingOpening, Opening};
+use crate::utils::{s_vec, SPoly};
 use crate::{Assert, Fr, IpaScheme, IsFalse};
 use ark_ec::short_weierstrass_jacobian::{GroupAffine, GroupProjective};
 use ark_ec::{AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters};
@@ -61,49 +62,31 @@ where
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
         let p = commitment.0.into_projective() + u.mul(eval);
         let mut exp = 2_u64.pow(rounds.len() as u32);
-        struct PolySegment<P: SWModelParameters> {
-            inverse: Fr<P>,
-            challenge: Fr<P>,
-            exp: u64,
-        }
 
-        let (final_commit, challenges, b) = rounds.iter().fold(
+        let (final_commit, challenges, s_poly) = rounds.iter().fold(
             (
                 p,
                 Vec::with_capacity(rounds.len()),
-                Vec::<PolySegment<P>>::with_capacity(rounds.len()),
+                SPoly::<P>::new(rounds.len()),
             ),
             |state, (lj, rj)| {
-                let (p, mut challenges, mut b) = state;
+                let (p, mut challenges, s_poly) = state;
                 let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
                 let inverse = challenge.inverse().unwrap();
                 let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
                 challenges.push((challenge, inverse));
 
                 exp = exp / 2;
-                b.push(PolySegment {
-                    inverse,
-                    challenge,
-                    exp,
-                });
+                let s_poly = s_poly.add_term(inverse, challenge, exp);
 
-                (new_commit, challenges, b)
+                (new_commit, challenges, s_poly)
             },
         );
         let s = s_vec::<P>(challenges);
         let basis = self.basis_from_s(s);
-        let b = b
-            .into_iter()
-            .map(|segment| {
-                let PolySegment {
-                    inverse,
-                    challenge,
-                    exp,
-                } = segment;
-                inverse + challenge * point.pow([exp])
-            })
-            .reduce(Mul::mul)
-            .unwrap();
+        let b = s_poly.eval(point);
+        println!("verifier basis:");
+        println!("{}", basis);
         (final_commit, basis.mul(a) + u.mul(a * b))
     }
     fn basis_from_s(&self, s: Vec<Fr<P>>) -> GroupAffine<P> {
@@ -114,30 +97,4 @@ where
         let result = ark_ec::msm::VariableBaseMSM::multi_scalar_mul(bases, scalars);
         result.into_affine()
     }
-}
-
-fn s_vec<P: SWModelParameters>(challenges: Vec<(Fr<P>, Fr<P>)>) -> Vec<Fr<P>> {
-    let size = challenges.len();
-    let size = 2_usize.pow(size as u32) as usize;
-    let mut challenges = challenges
-        .into_iter()
-        .enumerate()
-        .map(|(i, (challenge, inverse))| {
-            let segment_size = size / (2_usize.pow(i as u32 + 1));
-            let challenge_segment = repeat(challenge).take(segment_size);
-            let inverse_segment = repeat(inverse).take(segment_size);
-            let combined = inverse_segment.chain(challenge_segment);
-            combined.cycle()
-        })
-        .collect::<Vec<_>>();
-    let f = || {
-        let elem = challenges
-            .iter_mut()
-            .filter_map(|iter| iter.next())
-            .reduce(Mul::mul);
-        elem
-    };
-    let s = std::iter::from_fn(f).take(size).collect::<Vec<_>>();
-    debug_assert_eq!(size, s.len());
-    s
 }

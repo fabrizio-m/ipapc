@@ -1,0 +1,31 @@
+name: Criterion.rs Benchmark
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  benchmark:
+    name: Run Criterion.rs benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: rustup toolchain update nightly && rustup default nightly
+      - name: Run benchmark
+        run: cd examples/criterion-rs && cargo +nightly bench -- --output-format bencher | tee output.txt
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Rust Benchmark
+          tool: "cargo"
+          output-file-path: examples/criterion-rs/output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          alert-threshold: "200%"
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-comment-cc-users: "@Strytyp"
