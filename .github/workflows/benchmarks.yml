@@ -22,7 +22,7 @@ jobs:
         with:
           name: Rust Benchmark
           tool: "cargo"
-          output-file-path: examples/criterion-rs/output.txt
+          output-file-path: ./output.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
           alert-threshold: "200%"
