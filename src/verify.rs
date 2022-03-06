@@ -1,12 +1,14 @@
-use crate::challenges::ChallengeGenerator;
-use crate::prove::{Commitment, HidingOpening, Opening};
-use crate::utils::{s_vec, SPoly};
-use crate::{Assert, Fr, IpaScheme, IsFalse};
-use ark_ec::short_weierstrass_jacobian::{GroupAffine, GroupProjective};
-use ark_ec::{AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters};
+use crate::{
+    challenges::ChallengeGenerator,
+    prove::{Commitment, HidingOpening, Opening},
+    utils::{s_vec, SPoly},
+    Assert, Fr, IpaScheme, IsFalse,
+};
+use ark_ec::{
+    short_weierstrass_jacobian::{GroupAffine, GroupProjective},
+    AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
+};
 use ark_ff::{Field, One, PrimeField};
-use std::iter::repeat;
-use std::ops::Mul;
 
 impl<P, const HIDING: bool> IpaScheme<P, HIDING>
 where

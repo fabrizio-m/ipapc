@@ -26,9 +26,10 @@ pub fn compress<P: SWModelParameters>(
     left: &[Fr<P>],
     right: &[Fr<P>],
     challenge: Fr<P>,
+    challenge_inverse: Fr<P>,
 ) -> Vec<Fr<P>> {
     assert_eq!(left.len(), right.len());
-    let inverse = challenge.inverse().unwrap();
+    let inverse = challenge_inverse;
     let left = left.iter().map(|elem| *elem * inverse);
     let right = right.iter().map(|elem| *elem * challenge);
     left.zip(right).map(|(a, b)| a + b).collect()
