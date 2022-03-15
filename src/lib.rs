@@ -11,6 +11,7 @@ use std::{
     iter::{repeat, successors},
 };
 
+pub mod amortization;
 mod challenges;
 mod homomorphism;
 pub mod prove;

@@ -1,7 +1,7 @@
 use crate::{
     challenges::ChallengeGenerator,
     prove::{Commitment, HidingOpening, Opening},
-    utils::{s_vec, SPoly},
+    utils::s_vec,
     Assert, Fr, IpaScheme, IsFalse,
 };
 use ark_ec::{
@@ -9,6 +9,7 @@ use ark_ec::{
     AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
 };
 use ark_ff::{Field, One, PrimeField};
+use ark_poly::{univariate::SparsePolynomial, Polynomial};
 
 impl<P, const HIDING: bool> IpaScheme<P, HIDING>
 where
@@ -65,29 +66,34 @@ where
         let p = commitment.0.into_projective() + u.mul(eval);
         let mut exp = 2_u64.pow(rounds.len() as u32);
 
-        let (final_commit, challenges, s_poly) = rounds.iter().fold(
+        let (final_commit, challenges, b) = rounds.iter().fold(
             (
                 p,
                 Vec::with_capacity(rounds.len()),
-                SPoly::<P>::new(rounds.len()),
+                //SPoly::<P>::new(rounds.len()),
+                Fr::<P>::one(),
             ),
             |state, (lj, rj)| {
-                let (p, mut challenges, s_poly) = state;
+                let (p, mut challenges, s_eval) = state;
                 let challenge = <ChallengeGenerator<P>>::round_challenge(lj, rj);
                 let inverse = challenge.inverse().unwrap();
                 let new_commit = p + (lj.mul(challenge.square()) + rj.mul(inverse.square()));
                 challenges.push((challenge, inverse));
 
                 exp = exp / 2;
-                let s_poly = s_poly.add_term(inverse, challenge, exp);
+                let s_eval = self.eval_term(challenge, inverse, exp, &point) * s_eval;
 
-                (new_commit, challenges, s_poly)
+                (new_commit, challenges, s_eval)
             },
         );
         let s = s_vec::<P>(challenges);
         let basis = self.basis_from_s(s);
-        let b = s_poly.eval(point);
         (final_commit, basis.mul(a) + u.mul(a * b))
+    }
+    fn eval_term(&self, challenge: Fr<P>, inverse: Fr<P>, exp: u64, point: &Fr<P>) -> Fr<P> {
+        let term =
+            SparsePolynomial::from_coefficients_vec(vec![(0, inverse), (exp as usize, challenge)]);
+        term.evaluate(point)
     }
     fn basis_from_s(&self, s: Vec<Fr<P>>) -> GroupAffine<P> {
         debug_assert_eq!(s.len(), self.max_degree);

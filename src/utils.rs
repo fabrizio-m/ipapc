@@ -60,43 +60,6 @@ pub fn split<T>(slice: &[T]) -> (&[T], &[T]) {
     (&slice[0..len / 2], &slice[len / 2..])
 }
 
-pub(crate) struct PolySegment<P: SWModelParameters> {
-    inverse: Fr<P>,
-    challenge: Fr<P>,
-    exp: u64,
-}
-#[derive(Default)]
-pub(crate) struct SPoly<P: SWModelParameters>(Vec<PolySegment<P>>);
-
-impl<P: SWModelParameters> SPoly<P> {
-    pub(crate) fn eval(self, point: Fr<P>) -> Fr<P> {
-        self.0
-            .into_iter()
-            .map(|segment| {
-                let PolySegment {
-                    inverse,
-                    challenge,
-                    exp,
-                } = segment;
-                inverse + challenge * point.pow([exp])
-            })
-            .reduce(Mul::mul)
-            .unwrap()
-    }
-    pub(crate) fn new(size_hint: usize) -> Self {
-        Self(Vec::with_capacity(size_hint))
-    }
-    pub(crate) fn add_term(mut self, inverse: Fr<P>, challenge: Fr<P>, exp: u64) -> Self {
-        let term = PolySegment {
-            inverse,
-            challenge,
-            exp,
-        };
-        self.0.push(term);
-        self
-    }
-}
-
 pub(crate) fn s_vec<P: SWModelParameters>(challenges: Vec<(Fr<P>, Fr<P>)>) -> Vec<Fr<P>> {
     let size = challenges.len();
     let size = 2_usize.pow(size as u32) as usize;

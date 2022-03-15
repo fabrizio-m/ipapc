@@ -27,9 +27,9 @@ struct HidingRoundOutput<P: SWModelParameters> {
     blind: Fr<P>,
     challenges: Option<Vec<(Fr<P>, Fr<P>)>>,
 }
-struct RoundOutput<P: SWModelParameters> {
-    lj: GroupAffine<P>,
-    rj: GroupAffine<P>,
+pub(crate) struct RoundOutput<P: SWModelParameters> {
+    pub(crate) lj: GroupAffine<P>,
+    pub(crate) rj: GroupAffine<P>,
     a: Vec<Fr<P>>,
     b: Vec<Fr<P>>,
     basis: Vec<GroupAffine<P>>,
@@ -81,20 +81,20 @@ where
         let basis = &*self.basis;
         let b = self.b(point);
         //let mut rng = &self.rng;
-        let first = Self::round(basis, a, &*b, u, Some(vec![]));
+        let first = Self::round(basis, a, &*b, u, None);
         let rounds = vec![(first.lj, first.rj)];
-        let (opening, _) = Self::open_recursive(first, rounds, point, eval, u);
+        let (opening, _, _) = Self::open_recursive(first, rounds, point, eval, u);
 
         opening
     }
 
-    fn open_recursive(
+    pub(crate) fn open_recursive(
         prev: RoundOutput<P>,
         mut rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
         point: Fr<P>,
         eval: Fr<P>,
         u: GroupAffine<P>,
-    ) -> (Opening<P>, Option<Vec<(Fr<P>, Fr<P>)>>)
+    ) -> (Opening<P>, Option<Vec<(Fr<P>, Fr<P>)>>, GroupAffine<P>)
     where
         Assert<HIDING>: IsFalse,
     {
@@ -114,6 +114,7 @@ where
                     eval,
                 },
                 challenges,
+                basis[0],
             )
         } else {
             let prev = Self::round(&*basis, &*a, &*b, u, challenges);
@@ -121,7 +122,7 @@ where
             Self::open_recursive(prev, rounds, point, eval, u)
         }
     }
-    fn round(
+    pub(crate) fn round(
         basis: &[GroupAffine<P>],
         a: &[Fr<P>],
         b: &[Fr<P>],

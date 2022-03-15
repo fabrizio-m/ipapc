@@ -27,6 +27,16 @@ impl<P: SWModelParameters> ChallengeGenerator<P> {
     fn digest_scalar(&mut self, element: &Fr<P>) {
         element.serialize_unchecked(&mut self.data).unwrap()
     }
+    ///digests commitments to generate the elements for amortization
+    pub fn digest_for_amortization(&mut self, commitment: GroupAffine<P>) {
+        commitment.serialize_unchecked(&mut self.data).unwrap()
+    }
+    ///generates the element for the lineal combination and the evaluation point
+    pub fn amortization_elements(self) -> (Fr<P>, Fr<P>) {
+        let mut rng = self.generate_rng();
+        (<Fr<P>>::rand(&mut rng), <Fr<P>>::rand(&mut rng))
+    }
+
     pub fn inner_product_basis<const HIDING: bool>(
         commitment: &Commitment<P, HIDING>,
         point: &Fr<P>,
