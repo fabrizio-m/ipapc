@@ -4,10 +4,7 @@ use ark_ec::{
     AffineCurve, ProjectiveCurve, SWModelParameters,
 };
 use ark_ff::Field;
-use std::{
-    iter::repeat,
-    ops::{Add, Mul},
-};
+use std::ops::Add;
 
 pub fn compress_basis<P: SWModelParameters>(
     left: &[GroupAffine<P>],
@@ -58,30 +55,4 @@ pub fn split<T>(slice: &[T]) -> (&[T], &[T]) {
     let len = slice.len();
     assert_eq!(len % 2, 0);
     (&slice[0..len / 2], &slice[len / 2..])
-}
-
-pub(crate) fn s_vec<P: SWModelParameters>(challenges: Vec<(Fr<P>, Fr<P>)>) -> Vec<Fr<P>> {
-    let size = challenges.len();
-    let size = 2_usize.pow(size as u32) as usize;
-    let mut challenges = challenges
-        .into_iter()
-        .enumerate()
-        .map(|(i, (challenge, inverse))| {
-            let segment_size = size / (2_usize.pow(i as u32 + 1));
-            let challenge_segment = repeat(challenge).take(segment_size);
-            let inverse_segment = repeat(inverse).take(segment_size);
-            let combined = inverse_segment.chain(challenge_segment);
-            combined.cycle()
-        })
-        .collect::<Vec<_>>();
-    let f = || {
-        let elem = challenges
-            .iter_mut()
-            .filter_map(|iter| iter.next())
-            .reduce(Mul::mul);
-        elem
-    };
-    let s = std::iter::from_fn(f).take(size).collect::<Vec<_>>();
-    debug_assert_eq!(size, s.len());
-    s
 }
