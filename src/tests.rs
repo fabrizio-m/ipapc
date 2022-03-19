@@ -7,7 +7,7 @@ use rand::thread_rng;
 #[test]
 fn test_hiding() {
     let mut rng = thread_rng();
-    let scheme = IpaScheme::<PallasParameters, true>::init(Init::Seed(1), 3);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 3);
     let poly = [1, 2, 3, 4, 5, 6, 7, 8].map(Fr::from).to_vec();
     let commit = scheme.commit_hiding(poly.clone(), &mut rng);
     let point = Fr::from(5);
@@ -23,7 +23,7 @@ fn test_hiding() {
 
 #[test]
 fn test_binding() {
-    let scheme = IpaScheme::<PallasParameters, false>::init(Init::Seed(1), 3);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 3);
     let poly = [1, 2, 3, 4, 5, 6, 7, 8].map(Fr::from).to_vec();
     let commit = scheme.commit(poly.clone());
     let point = Fr::from(5);

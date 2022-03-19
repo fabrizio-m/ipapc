@@ -6,13 +6,13 @@ use ipapc::{Init, IpaScheme};
 use rand::{prelude::ThreadRng, thread_rng, Rng};
 use std::{iter::repeat, ops::RangeInclusive};
 
-type Scheme = IpaScheme<PallasParameters, false>;
+type Scheme = IpaScheme<PallasParameters>;
 type Fr = <GroupAffine<PallasParameters> as AffineCurve>::ScalarField;
 
 const RANGE: RangeInclusive<u8> = 8..=14;
 
 fn sample(size: u8) -> (Scheme, Vec<Fr>, ThreadRng) {
-    let scheme = IpaScheme::<PallasParameters, false>::init(Init::Seed(1), size);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), size);
     let mut rng = thread_rng();
     //let poly: [Fr<PallasParameters>; 2_usize.pow(SIZE as u32)] = rng.gen();
     let poly: Vec<Fr> = repeat(())

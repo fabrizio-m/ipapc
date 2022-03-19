@@ -1,9 +1,7 @@
-use std::ops::Mul;
-
 use crate::{
     challenges::ChallengeGenerator,
     prove::{Commitment, HidingOpening, Opening},
-    Assert, Fr, IpaScheme, IsFalse,
+    Fr, IpaScheme,
 };
 use ark_ec::{
     short_weierstrass_jacobian::{GroupAffine, GroupProjective},
@@ -14,16 +12,16 @@ use ark_poly::{
     univariate::{DenseOrSparsePolynomial, DensePolynomial, SparsePolynomial},
     Polynomial,
 };
+use std::ops::Mul;
 
-impl<P, const HIDING: bool> IpaScheme<P, HIDING>
+impl<P> IpaScheme<P>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
-    Commitment<P, HIDING>: Clone + Copy,
 {
     pub fn verify_hiding(
         &self,
-        commitment: Commitment<P, HIDING>,
+        commitment: Commitment<P, true>,
         open: HidingOpening<P>,
     ) -> Option<Fr<P>> {
         let HidingOpening::<P> {
@@ -41,10 +39,7 @@ where
         }
     }
 
-    pub fn verify(&self, commitment: Commitment<P, HIDING>, open: Opening<P>) -> Option<Fr<P>>
-    where
-        Assert<HIDING>: IsFalse,
-    {
+    pub fn verify(&self, commitment: Commitment<P, false>, open: Opening<P>) -> Option<Fr<P>> {
         let Opening::<P> {
             point,
             eval,
@@ -58,7 +53,7 @@ where
             None
         }
     }
-    fn general_verify(
+    pub(crate) fn general_verify<const HIDING: bool>(
         &self,
         commitment: Commitment<P, HIDING>,
         point: Fr<P>,
@@ -71,7 +66,7 @@ where
         let (final_commit, b_poly) = Self::process_rounds(commitment, point, eval, rounds);
         let b = Self::eval_b_poly(&b_poly, point);
         let s = Self::sparse_to_dense(b_poly).coeffs;
-        let basis = Self::s_to_basis(&self, s.clone());
+        let basis = Self::s_to_basis(&self, s);
 
         (final_commit, basis.mul(a) + u.mul(a * b))
     }
@@ -79,7 +74,7 @@ where
         let poly = polys.into_iter().reduce(|a, b| a.mul(&b)).unwrap();
         DenseOrSparsePolynomial::from(poly).into()
     }
-    fn eval_b_poly(b_poly: &Vec<SparsePolynomial<Fr<P>>>, point: Fr<P>) -> Fr<P> {
+    pub(crate) fn eval_b_poly(b_poly: &Vec<SparsePolynomial<Fr<P>>>, point: Fr<P>) -> Fr<P> {
         b_poly
             .iter()
             .map(|poly| poly.evaluate(&point))
@@ -89,7 +84,7 @@ where
     /// compute
     /// final commitment
     /// b_poly
-    fn process_rounds(
+    pub(crate) fn process_rounds<const HIDING: bool>(
         commitment: Commitment<P, HIDING>,
         point: Fr<P>,
         eval: Fr<P>,

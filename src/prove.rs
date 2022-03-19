@@ -1,7 +1,7 @@
 use crate::{
     challenges::ChallengeGenerator,
     utils::{compress, compress_basis, inner_product, scalar_inner_product, split},
-    Assert, Fr, IpaScheme, IsFalse, IsTrue,
+    Fr, IpaScheme,
 };
 use ark_ec::{
     short_weierstrass_jacobian::GroupAffine, AffineCurve, ModelParameters, ProjectiveCurve,
@@ -61,22 +61,18 @@ impl<P: SWModelParameters> From<UnsafeHidingCommitment<P>> for Commitment<P, tru
     }
 }
 
-impl<P, const HIDING: bool> IpaScheme<P, HIDING>
+impl<P> IpaScheme<P>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
-    Commitment<P, HIDING>: Clone + Copy,
 {
     pub fn open(
         &self,
-        commitment: Commitment<P, HIDING>,
+        commitment: Commitment<P, false>,
         a: &[Fr<P>],
         point: Fr<P>,
         eval: Fr<P>,
-    ) -> Opening<P>
-    where
-        Assert<HIDING>: IsFalse,
-    {
+    ) -> Opening<P> {
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
         let basis = &*self.basis;
         let b = self.b(point);
@@ -94,10 +90,7 @@ where
         point: Fr<P>,
         eval: Fr<P>,
         u: GroupAffine<P>,
-    ) -> (Opening<P>, Option<Vec<(Fr<P>, Fr<P>)>>, GroupAffine<P>)
-    where
-        Assert<HIDING>: IsFalse,
-    {
+    ) -> (Opening<P>, Option<Vec<(Fr<P>, Fr<P>)>>, GroupAffine<P>) {
         let RoundOutput {
             a,
             b,
@@ -210,10 +203,7 @@ where
         u: GroupAffine<P>,
         blinding_basis: GroupAffine<P>,
         rng: &mut impl Rng,
-    ) -> HidingOpening<P>
-    where
-        Assert<HIDING>: IsTrue,
-    {
+    ) -> HidingOpening<P> {
         let HidingRoundOutput {
             a,
             b,
@@ -245,10 +235,7 @@ where
         point: Fr<P>,
         eval: Fr<P>,
         rng: &mut impl Rng,
-    ) -> HidingOpening<P>
-    where
-        Assert<HIDING>: IsTrue,
-    {
+    ) -> HidingOpening<P> {
         let UnsafeHidingCommitment(commitment, blinding) = commitment;
         let commitment = Commitment::<_, true>(commitment);
         let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
@@ -272,10 +259,7 @@ where
         rng: &mut impl Rng,
         blind: Fr<P>,
         challenges: Option<Vec<(Fr<P>, Fr<P>)>>,
-    ) -> HidingRoundOutput<P>
-    where
-        Assert<HIDING>: IsTrue,
-    {
+    ) -> HidingRoundOutput<P> {
         assert_eq!(basis.len(), a.len());
         assert_eq!(basis.len(), b.len());
         assert!(basis.len() > 1);

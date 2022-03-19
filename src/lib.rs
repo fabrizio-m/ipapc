@@ -22,7 +22,7 @@ pub mod verify;
 
 //type Poly<Fr> = DensePolynomial<Fr>;
 type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
-pub struct IpaScheme<P, const HIDING: bool>
+pub struct IpaScheme<P>
 where
     P: ModelParameters + SWModelParameters,
 {
@@ -39,11 +39,10 @@ pub enum Init<T: SWModelParameters> {
     Elements(Vec<GroupAffine<T>>, GroupAffine<T>),
 }
 
-impl<P, const HIDING: bool> IpaScheme<P, HIDING>
+impl<P> IpaScheme<P>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
-    Commitment<P, HIDING>: Clone + Copy,
 {
     pub fn init(init: Init<P>, max_size: u8) -> Self {
         let max_degree = 2_usize.pow(max_size as u32);
@@ -70,10 +69,7 @@ where
         &self,
         coeffs: Vec<Fr<P>>,
         rng: &mut impl Rng,
-    ) -> UnsafeHidingCommitment<P>
-    where
-        Assert<HIDING>: IsTrue,
-    {
+    ) -> UnsafeHidingCommitment<P> {
         assert_eq!(coeffs.len(), self.max_degree);
         let blinding_factor = Fr::<P>::rand(rng);
         let commitment = self.commit_simple(coeffs);
@@ -81,10 +77,7 @@ where
 
         UnsafeHidingCommitment(commitment.into_affine(), blinding_factor)
     }
-    pub fn commit<'a>(&self, coeffs: Vec<Fr<P>>) -> Commitment<P, HIDING>
-    where
-        Assert<HIDING>: IsFalse,
-    {
+    pub fn commit<'a>(&self, coeffs: Vec<Fr<P>>) -> Commitment<P, false> {
         assert_eq!(coeffs.len(), self.max_degree);
         let commitment = self.commit_simple(coeffs);
         Commitment(commitment.into_affine())
