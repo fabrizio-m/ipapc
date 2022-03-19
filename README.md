@@ -6,7 +6,7 @@ An inner product argument based polynomial commitment scheme, generic over arkwo
 - [x] Amortized open.
 - [x] Benchmarks.
 - [ ] Plot iai benchmarks.
-- [ ] Amortized verify.
+- [x] Amortized verify.
 - [ ] ZK opening. 
 - [ ] Precomputation optimizations.
 - [ ] Generic over hash and laws.

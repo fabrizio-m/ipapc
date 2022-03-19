@@ -10,6 +10,7 @@ use ark_poly::{
 };
 use std::{iter::successors, ops::Mul};
 
+#[derive(Clone)]
 pub struct MultiOpening<P: SWModelParameters> {
     openings: Vec<(Opening<P>, GroupAffine<P>)>,
     batch_opening: Opening<P>,
@@ -178,29 +179,9 @@ where
     }
 }
 
-#[cfg(test)]
-fn commit_and_open<P>(scheme: &IpaScheme<P>) -> (Commitment<P, false>, Vec<Fr<P>>, Fr<P>, Fr<P>)
-where
-    P: SWModelParameters,
-    Fr<P>: From<i32>,
-{
-    use ark_ff::UniformRand;
-    use rand::thread_rng;
-
-    type Poly<P> = ark_poly::univariate::DensePolynomial<Fr<P>>;
-    let mut rng = thread_rng();
-    let poly = [0; 256].map(|_| Fr::<P>::rand(&mut rng)).to_vec();
-    let commit = scheme.commit(poly.clone());
-    let point = Fr::<P>::from(5);
-    let eval = {
-        let poly = Poly::<P>::from_coefficients_slice(&*poly);
-        poly.evaluate(&point)
-    };
-    (commit, poly, point, eval)
-}
 #[test]
 fn test_multi() {
-    use crate::Init;
+    use crate::{tests::commit_and_open, Init};
     use ark_pallas::PallasParameters;
     let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 8);
     let (commitments, opens) = (0..4)

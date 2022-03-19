@@ -16,6 +16,7 @@ ark-pallas = "0.3"
 
 [features]
 default = ["rand"]
+test = []
 
 [dev-dependencies]
 criterion = "0.3"
@@ -27,6 +28,10 @@ harness = false
 
 [[bench]]
 name = "benchmark_simple"
+harness = false
+
+[[bench]]
+name = "amortization"
 harness = false
 
 [[bench]]

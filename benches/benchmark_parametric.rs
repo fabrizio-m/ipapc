@@ -101,5 +101,9 @@ pub fn verify(c: &mut Criterion) {
     }
     group.finish();
 }
-criterion_group!(benches, commit, open, verify);
+criterion_group!(
+    name = benches;
+    config = Criterion::default().sample_size(10);
+    targets = commit, open, verify
+);
 criterion_main!(benches);

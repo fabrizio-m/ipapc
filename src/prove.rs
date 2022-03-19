@@ -11,7 +11,7 @@ use ark_ff::{Field, One, UniformRand};
 use rand::Rng;
 use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Opening<P: SWModelParameters> {
     pub(crate) point: Fr<P>,
     pub(crate) eval: Fr<P>,
