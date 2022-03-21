@@ -4,7 +4,6 @@ use ark_ec::{
 };
 use ark_ff::UniformRand;
 use ark_serialize::CanonicalSerialize;
-use blake2::{Blake2s256, Digest};
 use rand::{prelude::StdRng, SeedableRng};
 use std::marker::PhantomData;
 
@@ -60,7 +59,7 @@ impl<P: SWModelParameters> ChallengeGenerator<P> {
     }
     fn generate_rng(self) -> StdRng {
         let Self { data, .. } = self;
-        let seed: [u8; 32] = Blake2s256::digest(data).try_into().unwrap();
+        let seed: [u8; 32] = blake3::hash(&*data).try_into().unwrap();
         StdRng::from_seed(seed)
     }
 }

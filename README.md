@@ -11,6 +11,7 @@ An inner product argument based polynomial commitment scheme, generic over arkwo
 - [ ] Precomputation optimizations.
 - [ ] Generic over hash and laws.
 - [ ] CUDA MSM?.
+- [ ] Commit to evaluations.
 
 ## Benchmarks
 https://strytyp.github.io/ipapc/dev/bench/ 
