@@ -7,7 +7,7 @@ use ark_ec::{
     short_weierstrass_jacobian::GroupAffine, AffineCurve, ModelParameters, ProjectiveCurve,
     SWModelParameters,
 };
-use ark_ff::{Field, One, UniformRand};
+use ark_ff::{Field, One, ToBytes, UniformRand};
 use rand::Rng;
 use std::fmt::Debug;
 
@@ -35,24 +35,11 @@ pub(crate) struct RoundOutput<P: SWModelParameters> {
     basis: Vec<GroupAffine<P>>,
     challenges: Option<Vec<(Fr<P>, Fr<P>)>>,
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Commitment<T: SWModelParameters, const HIDING: bool>(pub(crate) GroupAffine<T>)
 where
     GroupAffine<T>: Debug;
 
-impl<T: SWModelParameters, const HIDING: bool> Eq for Commitment<T, HIDING> where
-    GroupAffine<T>: Debug
-{
-}
-
-impl<T: SWModelParameters, const HIDING: bool> PartialEq for Commitment<T, HIDING>
-where
-    GroupAffine<T>: Debug,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct UnsafeHidingCommitment<T: SWModelParameters>(
     pub(crate) GroupAffine<T>,
@@ -72,6 +59,16 @@ pub struct HidingOpening<P: SWModelParameters> {
 impl<P: SWModelParameters> From<UnsafeHidingCommitment<P>> for Commitment<P, true> {
     fn from(unsafe_commitment: UnsafeHidingCommitment<P>) -> Self {
         Commitment(unsafe_commitment.0)
+    }
+}
+impl<P, const HIDING: bool> From<Commitment<P, HIDING>> for Vec<u8>
+where
+    P: SWModelParameters,
+{
+    fn from(commit: Commitment<P, HIDING>) -> Self {
+        let mut bytes = Vec::new();
+        commit.0.write(&mut bytes).unwrap();
+        bytes
     }
 }
 
