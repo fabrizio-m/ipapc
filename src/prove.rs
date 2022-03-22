@@ -35,10 +35,19 @@ pub(crate) struct RoundOutput<P: SWModelParameters> {
     basis: Vec<GroupAffine<P>>,
     challenges: Option<Vec<(Fr<P>, Fr<P>)>>,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Commitment<T: SWModelParameters, const HIDING: bool>(pub(crate) GroupAffine<T>)
 where
     GroupAffine<T>: Debug;
+
+impl<T: SWModelParameters, const HIDING: bool> Debug for Commitment<T, HIDING>
+where
+    GroupAffine<T>: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Commitment").field(&self.0).finish()
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct UnsafeHidingCommitment<T: SWModelParameters>(
