@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1647981312390,
+  "lastUpdate": 1647985942351,
   "repoUrl": "https://github.com/Strytyp/ipapc",
   "entries": {
     "Rust Benchmark": [
@@ -1847,6 +1847,228 @@ window.BENCHMARK_DATA = {
             "name": "verify_simple",
             "value": 24713138,
             "range": "± 890148",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "fabrizio_m@hotmail.com",
+            "name": "fabri236",
+            "username": "Strytyp"
+          },
+          "committer": {
+            "email": "fabrizio_m@hotmail.com",
+            "name": "fabri236",
+            "username": "Strytyp"
+          },
+          "distinct": true,
+          "id": "b3aeb806e2713fe8572eae740894206e5497577b",
+          "message": "add impl",
+          "timestamp": "2022-03-22T18:09:32-03:00",
+          "tree_id": "38c8246d39392aa4f16e4057f9787a48c55c40fe",
+          "url": "https://github.com/Strytyp/ipapc/commit/b3aeb806e2713fe8572eae740894206e5497577b"
+        },
+        "date": 1647985941860,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "batch_verify/1",
+            "value": 75263479,
+            "range": "± 2717753",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/2",
+            "value": 78300411,
+            "range": "± 2147666",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/4",
+            "value": 87794579,
+            "range": "± 2549692",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/8",
+            "value": 107539419,
+            "range": "± 4477487",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/16",
+            "value": 139609907,
+            "range": "± 4020757",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/32",
+            "value": 198812856,
+            "range": "± 8300936",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/64",
+            "value": 362132324,
+            "range": "± 10724041",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/128",
+            "value": 599416453,
+            "range": "± 16735860",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "batch_verify/256",
+            "value": 1136468968,
+            "range": "± 35770707",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/8",
+            "value": 7325661,
+            "range": "± 186948",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/9",
+            "value": 12692945,
+            "range": "± 828256",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/10",
+            "value": 20646803,
+            "range": "± 457616",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/11",
+            "value": 37028360,
+            "range": "± 1587373",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/12",
+            "value": 64249257,
+            "range": "± 1885220",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/13",
+            "value": 114178482,
+            "range": "± 4838247",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit/14",
+            "value": 206903122,
+            "range": "± 8372485",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/8",
+            "value": 138346291,
+            "range": "± 3382955",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/9",
+            "value": 285506234,
+            "range": "± 9092900",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/10",
+            "value": 546025717,
+            "range": "± 10433580",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/11",
+            "value": 1085809158,
+            "range": "± 40732809",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/12",
+            "value": 2233901001,
+            "range": "± 66826702",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/13",
+            "value": 4606866428,
+            "range": "± 154313647",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open/14",
+            "value": 8879866939,
+            "range": "± 150755848",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/8",
+            "value": 10172965,
+            "range": "± 573171",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/9",
+            "value": 15904029,
+            "range": "± 1059370",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/10",
+            "value": 24343033,
+            "range": "± 1872468",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/11",
+            "value": 39744313,
+            "range": "± 2068346",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/12",
+            "value": 71106366,
+            "range": "± 3187736",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/13",
+            "value": 120318961,
+            "range": "± 6049735",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify/14",
+            "value": 220420059,
+            "range": "± 16503589",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "commit_simple",
+            "value": 20083731,
+            "range": "± 1362197",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "open_simple",
+            "value": 547619004,
+            "range": "± 16149840",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "verify_simple",
+            "value": 24050534,
+            "range": "± 1647529",
             "unit": "ns/iter"
           }
         ]
