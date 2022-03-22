@@ -35,10 +35,15 @@ pub(crate) struct RoundOutput<P: SWModelParameters> {
     basis: Vec<GroupAffine<P>>,
     challenges: Option<Vec<(Fr<P>, Fr<P>)>>,
 }
-#[derive(Clone, Copy, Debug, Eq)]
+#[derive(Clone, Copy, Debug)]
 pub struct Commitment<T: SWModelParameters, const HIDING: bool>(pub(crate) GroupAffine<T>)
 where
     GroupAffine<T>: Debug;
+
+impl<T: SWModelParameters, const HIDING: bool> Eq for Commitment<T, HIDING> where
+    GroupAffine<T>: Debug
+{
+}
 
 impl<T: SWModelParameters, const HIDING: bool> PartialEq for Commitment<T, HIDING>
 where
