@@ -34,6 +34,7 @@ where
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Blinding<P: SWModelParameters>(Fr<P>);
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Init<T: SWModelParameters> {
     Seed(u64),
     Elements(Vec<GroupAffine<T>>, GroupAffine<T>),
