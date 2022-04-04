@@ -13,6 +13,7 @@ use std::{
 
 pub mod amortization;
 mod challenges;
+mod fft;
 mod homomorphism;
 pub mod prove;
 #[cfg(test)]
