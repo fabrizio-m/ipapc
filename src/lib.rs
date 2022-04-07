@@ -89,6 +89,14 @@ where
             .take(self.basis.len())
             .collect()
     }
+    ///returns the reference string as commitments
+    pub fn string(&self) -> Vec<Commitment<P, false>> {
+        self.basis
+            .iter()
+            .cloned()
+            .map(|elem| Commitment(elem))
+            .collect()
+    }
 }
 
 impl<T: SWModelParameters> Init<T> {
