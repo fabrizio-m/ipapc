@@ -76,7 +76,7 @@ fn homomorphisms() {
 
     let make_scheme = || {
         let rng = StdRng::seed_from_u64(1);
-        (IpaScheme::<_>::init(Init::<P>::Seed(1), 2), rng)
+        (IpaScheme::<_>::init(Init::<P>::Seed(1), 2, true), rng)
     };
 
     let p1 = [0, 1, 2, 3].map(Fr::<P>::from).to_vec();

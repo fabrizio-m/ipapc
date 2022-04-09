@@ -53,7 +53,7 @@ fn sample(
 
 pub fn batch_verify(c: &mut Criterion) {
     let mut group = c.benchmark_group("batch_verify");
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), SIZE as u8);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), SIZE as u8, false);
 
     let (polys, commitments, opens) = sample(&scheme, 2_usize.pow(MAX as u32));
     for size in 0..=MAX {

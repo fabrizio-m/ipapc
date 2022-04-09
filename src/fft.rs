@@ -71,7 +71,7 @@ where
 fn lagrange_commitment() {
     use ark_pallas::PallasParameters;
     use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain};
-    let scheme = IpaScheme::<PallasParameters>::init(crate::Init::Seed(1), 3);
+    let scheme = IpaScheme::<PallasParameters>::init(crate::Init::Seed(1), 3, true);
     let domain = GeneralEvaluationDomain::new(8).unwrap();
     let evals = [1_i32, 0, 0, 0, 0, 0, 0, 0];
     let lcommit = |i| {

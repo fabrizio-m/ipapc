@@ -12,7 +12,7 @@ type Fr = <GroupAffine<PallasParameters> as AffineCurve>::ScalarField;
 const RANGE: RangeInclusive<u8> = 8..=14;
 
 fn sample(size: u8) -> (Scheme, Vec<Fr>, ThreadRng) {
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), size);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), size, false);
     let mut rng = thread_rng();
     //let poly: [Fr<PallasParameters>; 2_usize.pow(SIZE as u32)] = rng.gen();
     let poly: Vec<Fr> = repeat(())

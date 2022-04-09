@@ -3,6 +3,10 @@ use ark_ec::{
     AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
 };
 use ark_ff::{Field, One, PrimeField, UniformRand};
+use ark_poly::{
+    univariate::DensePolynomial, EvaluationDomain, Evaluations, Radix2EvaluationDomain,
+};
+use itertools::Itertools;
 pub use prove::{Commitment, HidingOpening, Opening, UnsafeHidingCommitment};
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{
@@ -28,6 +32,8 @@ where
     P: ModelParameters + SWModelParameters,
 {
     basis: Vec<GroupAffine<P>>,
+    ///second basis to commit to evals linearly
+    evaluation_basis: Option<Vec<GroupAffine<P>>>,
     blinding_basis: GroupAffine<P>,
     max_degree: usize,
 }
@@ -46,42 +52,67 @@ where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
 {
-    pub fn init(init: Init<P>, max_size: u8) -> Self {
+    pub fn init(init: Init<P>, max_size: u8, commit_to_evals: bool) -> Self {
         let max_degree = 2_usize.pow(max_size as u32);
         let (basis, blinding_basis) = init.to_elements(max_degree);
-        Self {
+        let scheme = Self {
             basis,
+            evaluation_basis: None,
             max_degree,
             blinding_basis,
             //rng,
+        };
+        match commit_to_evals {
+            true => {
+                let eval_basis = scheme
+                    .lagrange_commitments()
+                    .into_iter()
+                    .map(|point| point.0)
+                    .collect_vec();
+                Self {
+                    evaluation_basis: Some(eval_basis),
+                    ..scheme
+                }
+            }
+            false => scheme,
         }
     }
-    fn commit_simple<'a>(&self, coeffs: Vec<Fr<P>>) -> GroupProjective<P> {
-        debug_assert_eq!(coeffs.len(), self.max_degree);
-        let bases = &*self.basis;
-        let coeffs = coeffs
-            .into_iter()
-            .map(|e| e.into_repr())
-            .collect::<Vec<_>>();
+    fn commit_simple(&self, poly: impl Into<CoeffsOrEvals<P>>) -> GroupProjective<P> {
+        let poly: CoeffsOrEvals<P> = poly.into();
+        let (poly, basis) = self.poly_to_msm_vecs(poly);
+        debug_assert_eq!(poly.len(), self.max_degree);
+        let bases = &*basis;
+        let coeffs = poly.into_iter().map(|e| e.into_repr()).collect::<Vec<_>>();
         let scalars = &*coeffs;
         let result = ark_ec::msm::VariableBaseMSM::multi_scalar_mul(bases, scalars);
         result
     }
-    pub fn commit_hiding<'a>(
+    fn poly_to_msm_vecs(&self, poly: CoeffsOrEvals<P>) -> (Vec<Fr<P>>, &Vec<GroupAffine<P>>) {
+        //let basis = &self.basis;
+        match (poly, &self.evaluation_basis) {
+            (CoeffsOrEvals::Coeffs(coeffs), _) => (coeffs, &self.basis),
+            (CoeffsOrEvals::Evals(evals), None) => {
+                //interpolate
+                let domain = Radix2EvaluationDomain::<Fr<P>>::new(evals.len()).unwrap();
+                let evals = Evaluations::from_vec_and_domain(evals, domain);
+                (evals.interpolate().coeffs, &self.basis)
+            }
+            (CoeffsOrEvals::Evals(evals), Some(basis)) => (evals, basis),
+        }
+    }
+    pub fn commit_hiding(
         &self,
-        coeffs: Vec<Fr<P>>,
+        poly: impl Into<CoeffsOrEvals<P>>,
         rng: &mut impl Rng,
     ) -> UnsafeHidingCommitment<P> {
-        assert_eq!(coeffs.len(), self.max_degree);
         let blinding_factor = Fr::<P>::rand(rng);
-        let commitment = self.commit_simple(coeffs);
+        let commitment = self.commit_simple(poly);
         let commitment = commitment + self.blinding_basis.mul(blinding_factor);
 
         UnsafeHidingCommitment(commitment.into_affine(), blinding_factor)
     }
-    pub fn commit<'a>(&self, coeffs: Vec<Fr<P>>) -> Commitment<P, false> {
-        assert_eq!(coeffs.len(), self.max_degree);
-        let commitment = self.commit_simple(coeffs);
+    pub fn commit<'a>(&self, poly: impl Into<CoeffsOrEvals<P>>) -> Commitment<P, false> {
+        let commitment = self.commit_simple(poly);
         Commitment(commitment.into_affine())
     }
     fn b(&self, z: Fr<P>) -> Vec<Fr<P>> {
@@ -131,3 +162,25 @@ pub trait IsFalse {}
 
 impl IsTrue for Assert<true> {}
 impl IsFalse for Assert<false> {}
+
+pub enum CoeffsOrEvals<P: SWModelParameters> {
+    Coeffs(Vec<Fr<P>>),
+    Evals(Vec<Fr<P>>),
+}
+impl<P: SWModelParameters> From<Vec<Fr<P>>> for CoeffsOrEvals<P> {
+    fn from(coeffs: Vec<Fr<P>>) -> Self {
+        Self::Coeffs(coeffs)
+    }
+}
+
+impl<P: SWModelParameters> From<DensePolynomial<Fr<P>>> for CoeffsOrEvals<P> {
+    fn from(poly: DensePolynomial<Fr<P>>) -> Self {
+        Self::Coeffs(poly.coeffs)
+    }
+}
+
+impl<P: SWModelParameters> From<Evaluations<Fr<P>>> for CoeffsOrEvals<P> {
+    fn from(evals: Evaluations<Fr<P>>) -> Self {
+        Self::Evals(evals.evals)
+    }
+}

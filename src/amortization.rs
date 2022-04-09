@@ -183,7 +183,7 @@ where
 fn test_multi() {
     use crate::{tests::commit_and_open, Init};
     use ark_pallas::PallasParameters;
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 8);
+    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 8, true);
     let (commitments, opens) = (0..4)
         .map(|_| {
             let a = commit_and_open(&scheme);
