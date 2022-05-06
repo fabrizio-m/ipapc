@@ -1,8 +1,4 @@
-use crate::{
-    challenges::ChallengeGenerator,
-    prove::{Commitment, HidingOpening, Opening},
-    Fr, IpaScheme,
-};
+use crate::{challenges::ChallengeGenerator, open::VerifTrait, prove::Commitment, Fr, IpaScheme};
 use ark_ec::{
     short_weierstrass_jacobian::{GroupAffine, GroupProjective},
     AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
@@ -12,47 +8,22 @@ use ark_poly::{
     univariate::{DenseOrSparsePolynomial, DensePolynomial, SparsePolynomial},
     Polynomial,
 };
+use rand::Rng;
 use std::ops::Mul;
 
-impl<P> IpaScheme<P>
+impl<P, R> IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
+    R: Rng,
 {
-    pub fn verify_hiding(
-        &self,
-        commitment: Commitment<P, true>,
-        open: HidingOpening<P>,
-    ) -> Option<Fr<P>> {
-        let HidingOpening::<P> {
-            point,
-            eval,
-            a,
-            rounds,
-            blinding_factor,
-        } = open;
-        let (final_commit, check) = self.general_verify(commitment, point, eval, a, rounds);
-        if final_commit == check + self.blinding_basis.mul(blinding_factor) {
-            Some(eval)
-        } else {
-            None
-        }
+    pub fn verify<O>(&self, commitment: O::Commit, open: O) -> Option<Fr<P>>
+    where
+        O: VerifTrait<P, R>,
+    {
+        open.verify(self, commitment)
     }
 
-    pub fn verify(&self, commitment: Commitment<P, false>, open: Opening<P>) -> Option<Fr<P>> {
-        let Opening::<P> {
-            point,
-            eval,
-            a,
-            rounds,
-        } = open;
-        let (final_commit, check) = self.general_verify(commitment, point, eval, a, rounds);
-        if final_commit == check {
-            Some(eval)
-        } else {
-            None
-        }
-    }
     pub(crate) fn general_verify<const HIDING: bool>(
         &self,
         commitment: Commitment<P, HIDING>,

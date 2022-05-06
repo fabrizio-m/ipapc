@@ -1,5 +1,6 @@
 use crate::{
     challenges::ChallengeGenerator,
+    open::OpenTrait,
     utils::{compress, compress_basis, inner_product, scalar_inner_product, split},
     Fr, IpaScheme,
 };
@@ -18,9 +19,9 @@ pub struct Opening<P: SWModelParameters> {
     pub(crate) rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
     pub(crate) a: Fr<P>,
 }
-struct HidingRoundOutput<P: SWModelParameters> {
-    lj: GroupAffine<P>,
-    rj: GroupAffine<P>,
+pub(crate) struct HidingRoundOutput<P: SWModelParameters> {
+    pub(crate) lj: GroupAffine<P>,
+    pub(crate) rj: GroupAffine<P>,
     a: Vec<Fr<P>>,
     b: Vec<Fr<P>>,
     basis: Vec<GroupAffine<P>>,
@@ -56,6 +57,15 @@ pub struct UnsafeHidingCommitment<T: SWModelParameters>(
 )
 where
     GroupAffine<T>: Debug;
+
+impl<T: SWModelParameters> UnsafeHidingCommitment<T>
+where
+    GroupAffine<T>: Debug,
+{
+    pub fn clean(self) -> Commitment<T, true> {
+        Commitment(self.0)
+    }
+}
 #[derive(Debug)]
 pub struct HidingOpening<P: SWModelParameters> {
     pub(crate) point: Fr<P>,
@@ -81,27 +91,17 @@ where
     }
 }
 
-impl<P> IpaScheme<P>
+impl<P, R> IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
+    R: Rng,
 {
-    pub fn open(
-        &self,
-        commitment: Commitment<P, false>,
-        a: &[Fr<P>],
-        point: Fr<P>,
-        eval: Fr<P>,
-    ) -> Opening<P> {
-        let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
-        let basis = &*self.basis;
-        let b = self.b(point);
-        //let mut rng = &self.rng;
-        let first = Self::round(basis, a, &*b, u, None);
-        let rounds = vec![(first.lj, first.rj)];
-        let (opening, _, _) = Self::open_recursive(first, rounds, point, eval, u);
-
-        opening
+    pub fn open<O>(&self, commitment: O::Commit, a: &[Fr<P>], point: Fr<P>, eval: Fr<P>) -> O
+    where
+        O: OpenTrait<P, R>,
+    {
+        O::open(self, commitment, a, point, eval)
     }
 
     pub(crate) fn open_recursive(
@@ -215,7 +215,7 @@ where
         ([lj, rj], [a, b], basis, blind, challenges)
     }
 
-    fn open_recursive_hiding(
+    pub(crate) fn open_recursive_hiding(
         prev: HidingRoundOutput<P>,
         mut rounds: Vec<(GroupAffine<P>, GroupAffine<P>)>,
         point: Fr<P>,
@@ -248,29 +248,7 @@ where
         }
     }
 
-    pub fn open_hiding(
-        &self,
-        commitment: UnsafeHidingCommitment<P>,
-        a: &[Fr<P>],
-        point: Fr<P>,
-        eval: Fr<P>,
-        rng: &mut impl Rng,
-    ) -> HidingOpening<P> {
-        let UnsafeHidingCommitment(commitment, blinding) = commitment;
-        let commitment = Commitment::<_, true>(commitment);
-        let u = ChallengeGenerator::inner_product_basis(&commitment, &point);
-        let basis = &*self.basis;
-        let blinding_basis = self.blinding_basis;
-        let b = self.b(point);
-        //let mut rng = &self.rng;
-        let first = Self::hiding_round(basis, a, &*b, u, blinding_basis, rng, blinding, None);
-        let rounds = vec![(first.lj, first.rj)];
-        let opening =
-            Self::open_recursive_hiding(first, rounds, point, eval, u, blinding_basis, rng);
-        opening
-    }
-
-    fn hiding_round(
+    pub(crate) fn hiding_round(
         basis: &[GroupAffine<P>],
         a: &[Fr<P>],
         b: &[Fr<P>],

@@ -3,14 +3,14 @@ use ark_pallas::PallasParameters;
 use ark_poly::{Polynomial, UVPolynomial};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ipapc::{Commitment, Init, IpaScheme};
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 
 type Fr = <GroupAffine<PallasParameters> as AffineCurve>::ScalarField;
 const MAX: usize = 8;
 const SIZE: usize = 12;
 
-pub(crate) fn commit_and_open(
-    scheme: &IpaScheme<PallasParameters>,
+pub(crate) fn commit_and_open<R: Rng>(
+    scheme: &IpaScheme<PallasParameters, R>,
 ) -> (Commitment<PallasParameters, false>, Vec<Fr>, Fr, Fr) {
     use ark_ff::UniformRand;
 
@@ -27,8 +27,8 @@ pub(crate) fn commit_and_open(
     };
     (commit, poly, point, eval)
 }
-fn sample(
-    scheme: &IpaScheme<PallasParameters>,
+fn sample<R: Rng>(
+    scheme: &IpaScheme<PallasParameters, R>,
     size: usize,
 ) -> (
     Vec<Vec<Fr>>,
@@ -53,7 +53,8 @@ fn sample(
 
 pub fn batch_verify(c: &mut Criterion) {
     let mut group = c.benchmark_group("batch_verify");
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), SIZE as u8, false);
+    let scheme =
+        IpaScheme::<PallasParameters, _>::init(Init::Seed(1), SIZE as u8, false, thread_rng());
 
     let (polys, commitments, opens) = sample(&scheme, 2_usize.pow(MAX as u32));
     for size in 0..=MAX {

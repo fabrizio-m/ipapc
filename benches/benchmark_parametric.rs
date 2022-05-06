@@ -2,17 +2,17 @@ use ark_ec::{short_weierstrass_jacobian::GroupAffine, AffineCurve};
 use ark_pallas::PallasParameters;
 use ark_poly::{Polynomial, UVPolynomial};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use ipapc::{Init, IpaScheme};
+use ipapc::{Commitment, Init, IpaScheme, Opening};
 use rand::{prelude::ThreadRng, thread_rng, Rng};
 use std::{iter::repeat, ops::RangeInclusive};
 
-type Scheme = IpaScheme<PallasParameters>;
+type Scheme = IpaScheme<PallasParameters, ThreadRng>;
 type Fr = <GroupAffine<PallasParameters> as AffineCurve>::ScalarField;
 
 const RANGE: RangeInclusive<u8> = 8..=14;
 
 fn sample(size: u8) -> (Scheme, Vec<Fr>, ThreadRng) {
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), size, false);
+    let scheme = Scheme::init(Init::Seed(1), size, false, thread_rng());
     let mut rng = thread_rng();
     //let poly: [Fr<PallasParameters>; 2_usize.pow(SIZE as u32)] = rng.gen();
     let poly: Vec<Fr> = repeat(())
@@ -31,7 +31,7 @@ pub fn commit(c: &mut Criterion) {
 
             let coeffs = black_box(poly.to_vec());
             b.iter(|| {
-                let _commit = scheme.commit(black_box(coeffs.clone()));
+                let _commit: Commitment<_, false> = scheme.commit(black_box(coeffs.clone()));
             })
         });
     }
@@ -59,7 +59,7 @@ pub fn open(c: &mut Criterion) {
                     (point, commit, poly, eval)
                 },
                 |(point, commitment, a, eval)| {
-                    let open = scheme.open(commitment, &*a, point, eval);
+                    let open: Opening<_> = scheme.open(commitment, &*a, point, eval);
                     (open, a)
                 },
                 criterion::BatchSize::SmallInput,
@@ -88,7 +88,7 @@ pub fn verify(c: &mut Criterion) {
                         (eval, poly.coeffs)
                     };
                     //(point, commit, poly, eval)
-                    let open = scheme.open(commit, &*poly, point, eval);
+                    let open: Opening<_> = scheme.open(commit, &*poly, point, eval);
                     (commit, open)
                 },
                 |(commit, open)| {

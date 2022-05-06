@@ -1,15 +1,17 @@
 use ark_ec::{
     short_weierstrass_jacobian::{GroupAffine, GroupProjective},
-    AffineCurve, ModelParameters, ProjectiveCurve, SWModelParameters,
+    AffineCurve, ModelParameters, SWModelParameters,
 };
-use ark_ff::{Field, One, PrimeField, UniformRand};
+use ark_ff::{Field, One, PrimeField};
 use ark_poly::{
     univariate::DensePolynomial, EvaluationDomain, Evaluations, Radix2EvaluationDomain,
 };
+use commit::CommitmentTrait;
 use itertools::Itertools;
 pub use prove::{Commitment, HidingOpening, Opening, UnsafeHidingCommitment};
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use std::{
+    cell::RefCell,
     convert::identity,
     fmt::Debug,
     iter::{repeat, successors},
@@ -17,25 +19,29 @@ use std::{
 
 pub mod amortization;
 mod challenges;
-pub mod fft;
+mod commit;
+mod fft;
 mod homomorphism;
+mod open;
 pub mod prove;
 #[cfg(test)]
 mod tests;
 mod utils;
-pub mod verify;
+mod verify;
 
 //type Poly<Fr> = DensePolynomial<Fr>;
 type Fr<P> = <GroupAffine<P> as AffineCurve>::ScalarField;
-pub struct IpaScheme<P>
+pub struct IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
+    R: Rng,
 {
     basis: Vec<GroupAffine<P>>,
     ///second basis to commit to evals linearly
     evaluation_basis: Option<Vec<GroupAffine<P>>>,
     blinding_basis: GroupAffine<P>,
     max_degree: usize,
+    rng: RefCell<R>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,12 +53,13 @@ pub enum Init<T: SWModelParameters> {
     Elements(Vec<GroupAffine<T>>, GroupAffine<T>),
 }
 
-impl<P> IpaScheme<P>
+impl<P, R> IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
+    R: Rng,
 {
-    pub fn init(init: Init<P>, max_size: u8, commit_to_evals: bool) -> Self {
+    pub fn init(init: Init<P>, max_size: u8, commit_to_evals: bool, rng: R) -> Self {
         let max_degree = 2_usize.pow(max_size as u32);
         let (basis, blinding_basis) = init.to_elements(max_degree);
         let scheme = Self {
@@ -60,7 +67,7 @@ where
             evaluation_basis: None,
             max_degree,
             blinding_basis,
-            //rng,
+            rng: RefCell::new(rng),
         };
         match commit_to_evals {
             true => {
@@ -100,20 +107,8 @@ where
             (CoeffsOrEvals::Evals(evals), Some(basis)) => (evals, basis),
         }
     }
-    pub fn commit_hiding(
-        &self,
-        poly: impl Into<CoeffsOrEvals<P>>,
-        rng: &mut impl Rng,
-    ) -> UnsafeHidingCommitment<P> {
-        let blinding_factor = Fr::<P>::rand(rng);
-        let commitment = self.commit_simple(poly);
-        let commitment = commitment + self.blinding_basis.mul(blinding_factor);
-
-        UnsafeHidingCommitment(commitment.into_affine(), blinding_factor)
-    }
-    pub fn commit<'a>(&self, poly: impl Into<CoeffsOrEvals<P>>) -> Commitment<P, false> {
-        let commitment = self.commit_simple(poly);
-        Commitment(commitment.into_affine())
+    pub fn commit<C: CommitmentTrait<P, R>>(&self, poly: impl Into<CoeffsOrEvals<P>>) -> C {
+        C::commit(self, poly)
     }
     fn b(&self, z: Fr<P>) -> Vec<Fr<P>> {
         successors(Some(<Fr<P>>::one()), |previous| Some(*previous * z))

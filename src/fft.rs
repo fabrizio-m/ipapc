@@ -6,11 +6,13 @@ use ark_ec::{
 use ark_ff::{Field, One};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use itertools::{izip, Itertools};
+use rand::Rng;
 
-impl<P> IpaScheme<P>
+impl<P, R> IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
+    R: Rng,
 {
     pub fn lagrange_commitments(&self) -> Vec<Commitment<P, false>> {
         let basis = self.basis.iter().map(|e| e.into_projective()).collect_vec();
@@ -71,7 +73,9 @@ where
 fn lagrange_commitment() {
     use ark_pallas::PallasParameters;
     use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain};
-    let scheme = IpaScheme::<PallasParameters>::init(crate::Init::Seed(1), 3, true);
+    use rand::thread_rng;
+    let scheme =
+        IpaScheme::<PallasParameters, _>::init(crate::Init::Seed(1), 3, true, thread_rng());
     let domain = GeneralEvaluationDomain::new(8).unwrap();
     let evals = [1_i32, 0, 0, 0, 0, 0, 0, 0];
     let lcommit = |i| {
@@ -84,7 +88,7 @@ fn lagrange_commitment() {
             .take(evals.len())
             .collect_vec();
         let poly = Evaluations::from_vec_and_domain(evals, domain).interpolate();
-        let good_commit = scheme.commit(poly.coeffs);
+        let good_commit: Commitment<_, false> = scheme.commit(poly.coeffs);
         good_commit
     };
     let good_commitments = (0..8).map(lcommit).collect_vec();

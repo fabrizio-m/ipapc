@@ -8,6 +8,7 @@ use ark_poly::{
     univariate::{DenseOrSparsePolynomial, DensePolynomial, SparsePolynomial},
     Polynomial, UVPolynomial,
 };
+use rand::Rng;
 use std::{iter::successors, ops::Mul};
 
 #[derive(Clone)]
@@ -16,10 +17,11 @@ pub struct MultiOpening<P: SWModelParameters> {
     batch_opening: Opening<P>,
 }
 
-impl<P> IpaScheme<P>
+impl<P, R> IpaScheme<P, R>
 where
     P: ModelParameters + SWModelParameters,
     Fr<P>: One,
+    R: Rng,
 {
     pub fn batch_open<const HIDING: bool>(
         &self,
@@ -183,7 +185,8 @@ where
 fn test_multi() {
     use crate::{tests::commit_and_open, Init};
     use ark_pallas::PallasParameters;
-    let scheme = IpaScheme::<PallasParameters>::init(Init::Seed(1), 8, true);
+    use rand::thread_rng;
+    let scheme = IpaScheme::<PallasParameters, _>::init(Init::Seed(1), 8, true, thread_rng());
     let (commitments, opens) = (0..4)
         .map(|_| {
             let a = commit_and_open(&scheme);

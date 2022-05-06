@@ -69,14 +69,18 @@ impl<P: SWModelParameters> Sub for UnsafeHidingCommitment<P> {
 
 #[test]
 fn homomorphisms() {
-    use crate::{Init, IpaScheme};
+    use crate::{HidingOpening, Init, IpaScheme};
     use ark_poly::{univariate::DensePolynomial, Polynomial, UVPolynomial};
-    use rand::{prelude::StdRng, SeedableRng};
+    use rand::{prelude::StdRng, thread_rng, SeedableRng};
+
     type P = ark_pallas::PallasParameters;
 
     let make_scheme = || {
         let rng = StdRng::seed_from_u64(1);
-        (IpaScheme::<_>::init(Init::<P>::Seed(1), 2, true), rng)
+        (
+            IpaScheme::init(Init::<P>::Seed(1), 2, true, thread_rng()),
+            rng,
+        )
     };
 
     let p1 = [0, 1, 2, 3].map(Fr::<P>::from).to_vec();
@@ -86,15 +90,16 @@ fn homomorphisms() {
     let p4 = p1.iter().map(|e| *e * scalar).collect::<Vec<_>>();
 
     let check = |poly: Vec<_>| {
-        let (scheme, mut rng) = make_scheme();
-        let commit = scheme.commit_hiding(poly.clone(), &mut rng);
+        let (scheme, _rng) = make_scheme();
+        //let commit = scheme.commit_hiding(poly.clone(), &mut rng);
+        let commit = scheme.commit(poly.clone());
         let point = Fr::<P>::from(43);
         let eval = {
             let poly = DensePolynomial::<Fr<P>>::from_coefficients_slice(&*poly);
             poly.evaluate(&point)
         };
-        let open = scheme.open_hiding(commit, &*poly, point, eval, &mut rng);
-        scheme.verify_hiding(commit.into(), open).unwrap()
+        let open: HidingOpening<_> = scheme.open(commit, &*poly, point, eval);
+        scheme.verify(commit.into(), open).unwrap()
     };
     let c1 = check(p1);
     let c2 = check(p2);
